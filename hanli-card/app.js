@@ -29,7 +29,7 @@ function render(now){const dt=Math.min((now-previous)/1000||0,.04);previous=now;
    if(mode==='storm'){
      const f=(i/count+t*.24)%1;
      x=cx+(i%3-1)*R*.65+(1-f)*R*.9-R*.45;y=-240+f*(h+480);
-     angle=Math.PI+.45;size=(220+(i%3)*38)*(.6+scale*.4);
+     angle=Math.PI+Math.atan2(R*.9,h+480);size=(220+(i%3)*38)*(.6+scale*.4);
    }else if(mode==='thunder'){
      x=cx+Math.cos(a)*radius;y=cy+z*radius*.76;angle=a+Math.PI/2;
      size=(190+(z+1)*40)*(.6+scale*.4);
@@ -51,14 +51,28 @@ function render(now){const dt=Math.min((now-previous)/1000||0,.04);previous=now;
  }
  for(let i=0;i<count;i++){
    const p=pose(i,time),ctx=p.z>0?fc:bc,alpha=(.67+(p.z+1)*.13);
-   // A broad emerald wake, a gold midline, and a fine hot core.
-   const points=[];
-   for(let j=15;j>=0;j--){const q=pose(i,time-j*.035);points.push([q.x,q.y]);}
-   if(burst&&progress>.28){points.splice(0,points.length,[cx+(p.x-cx)*.24,cy+(p.y-cy)*.24],[p.x,p.y]);}
-   line(ctx,points,`rgba(20,220,147,${.13*intensity})`,22+energy*18,20);
-   line(ctx,points,`rgba(114,255,186,${.38*intensity})`,5+energy*5,12);
-   line(ctx,points,`rgba(247,241,178,${.72*intensity})`,1.3+energy,6);
-   for(let j=3;j>0;j--){const q=pose(i,time-j*.027);drawSword(ctx,q.x,q.y,q.size,q.angle,.07*(4-j)*intensity);}
+   // Sample backwards only while the motion remains continuous.
+   const points=[[p.x,p.y]], maxLength=Math.min(95,p.size*.42);
+   let travelled=0, previousPoint=p;
+   for(let j=1;j<=12;j++){
+     const q=pose(i,time-j*.016);
+     const segment=Math.hypot(q.x-previousPoint.x,q.y-previousPoint.y);
+     // A wrapped sword starts a new trail: never connect across the screen.
+     if(segment>Math.max(35,maxLength*.55)||travelled+segment>maxLength)break;
+     travelled+=segment;points.push([q.x,q.y]);previousPoint=q;
+   }
+   ctx.lineCap='round';ctx.lineJoin='round';
+   for(let j=points.length-1;j>0;j--){
+     const fade=Math.pow(1-j/points.length,1.7);
+     const pair=[points[j],points[j-1]];
+     line(ctx,pair,`rgba(40,227,160,${.16*intensity*fade})`,8*fade,8);
+     line(ctx,pair,`rgba(189,255,208,${.5*intensity*fade})`,2*fade,3);
+   }
+   for(let j=2;j>0;j--){
+     const q=pose(i,time-j*.023);
+     if(Math.hypot(q.x-p.x,q.y-p.y)<maxLength)
+       drawSword(ctx,q.x,q.y,q.size,q.angle,.045*(3-j)*intensity);
+   }
    drawSword(ctx,p.x,p.y,p.size,p.angle,alpha);
    // Lightning clings to the blade, rather than floating far from it.
    if(mode==='thunder'||burst){
