@@ -18,7 +18,7 @@ function drawSword(ctx,x,y,size,angle,alpha){if(!swordReady)return;ctx.save();ct
 
 function renderGiant(cx,cy,R,progress,energy){
  if(!burst||!swordReady)return;
- const length=Math.min(460,w*.78),hitX=cx+Math.min(150,w*.24),hitY=h*.72;
+ const length=Math.min(740,w*1.12),hitX=cx+Math.min(150,w*.24),hitY=h*.72;
  const startX=cx-Math.min(360,w*.6),startY=-length*.2;
  const dx=hitX-startX,dy=hitY-startY,d=Math.hypot(dx,dy),ux=dx/d,uy=dy/d;
  const angle=Math.atan2(ux,-uy);
@@ -34,8 +34,8 @@ function renderGiant(cx,cy,R,progress,energy){
    // Impact replaces the sword with a growing fracture and drifting glass.
    const f=(progress-.48)/.52,grow=Math.min(1,f/.2);
    const fade=1-Math.max(0,(f-.53)/.47);
-   const radius=Math.min(w*.67,h*.74)*grow;
-   const rayCount=13;
+   const radius=Math.hypot(w*.78,h*.82)*grow;
+   const rayCount=21;
    const point=(i,r)=>{
      const a=i/rayCount*Math.PI*2+Math.sin(i*7.13)*.12;
      return [hitX+Math.cos(a)*r,hitY+Math.sin(a)*r];
@@ -43,27 +43,27 @@ function renderGiant(cx,cy,R,progress,energy){
    for(let i=0;i<rayCount;i++){
      const reach=radius*(.65+.35*Math.abs(Math.sin(i*8.7)));
      const p0=[hitX,hitY],p1=point(i,reach*.36),p2=point(i+.2,reach*.68),p3=point(i,reach);
-     line(fc,[p0,p1,p2,p3],`rgba(183,229,228,${fade*.75})`,1.25,2);
+     line(fc,[p0,p1,p2,p3],`rgba(255,199,65,${fade*.9})`,2,8);
      if(i%2===0){
        const branch=point(i+.6,reach*.8);
-       line(fc,[p1,branch],`rgba(232,250,246,${fade*.5})`,.7);
+       line(fc,[p1,branch],`rgba(255,226,145,${fade*.75})`,1.1,4);
      }
      const next=point(i+1,reach*.5);
-     line(fc,[p1,next],`rgba(216,244,239,${fade*.38})`,.65);
+     line(fc,[p1,next],`rgba(240,173,46,${fade*.6})`,.9,3);
    }
    const drift=Math.max(0,(f-.16)/.84);
-   for(let i=0;i<26;i++){
-     const a=i*2.39996,base=25+(i%7)*18,travel=drift*(75+(i%5)*38);
+   for(let i=0;i<46;i++){
+     const a=i*2.39996,base=35+(i%7)*25,travel=drift*(150+(i%7)*58);
      const x=hitX+Math.cos(a)*(base+travel),y=hitY+Math.sin(a)*(base+travel)+drift*drift*120;
-     const size=(12+(i%4)*8)*(.5+grow*.5);
+     const size=(17+(i%4)*11)*(.5+grow*.5);
      fc.save();fc.translate(x,y);fc.rotate(a+drift*(i%2?1:-1)*1.7);
      fc.beginPath();fc.moveTo(-size*.5,-size*.7);fc.lineTo(size*.7,-size*.2);fc.lineTo(size*.1,size);fc.closePath();
-     fc.fillStyle=`rgba(163,215,210,${fade*.075})`;fc.fill();
-     fc.strokeStyle=`rgba(222,248,244,${fade*.65})`;fc.lineWidth=.8;fc.stroke();fc.restore();
+     fc.fillStyle=`rgba(255,186,50,${fade*.17})`;fc.fill();
+     fc.strokeStyle=`rgba(255,219,116,${fade*.9})`;fc.lineWidth=1.3;fc.stroke();fc.restore();
    }
    if(f<.25){
-     fc.beginPath();fc.arc(hitX,hitY,8+f*180,0,Math.PI*2);
-     fc.strokeStyle=`rgba(237,242,216,${(1-f/.25)*.7})`;fc.lineWidth=2;fc.stroke();
+     fc.beginPath();fc.arc(hitX,hitY,12+f*430,0,Math.PI*2);
+     fc.strokeStyle=`rgba(255,210,90,${(1-f/.25)*.9})`;fc.lineWidth=3;fc.stroke();
    }
  }
  fc.restore();
