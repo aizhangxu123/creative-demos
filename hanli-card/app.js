@@ -13,12 +13,19 @@ function release(){if(burst>0)return;paused=false;pauseUI();burst=burstTotal;bur
 card.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();card.focus({preventScroll:true});drag={x:e.clientX,y:e.clientY,tx,ty};card.setPointerCapture(e.pointerId)};card.onpointermove=e=>{if(!drag)return;tx=Math.max(-25,Math.min(25,drag.tx-(e.clientY-drag.y)*.2));ty=Math.max(-35,Math.min(35,drag.ty+(e.clientX-drag.x)*.22))};card.onpointerup=card.onpointercancel=card.onlostpointercapture=()=>drag=null;card.ondragstart=e=>e.preventDefault();
 card.onkeydown=e=>{if([' ','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();if(e.key===' '||e.key==='Enter')flip();if(e.key==='ArrowLeft')ty-=5;if(e.key==='ArrowRight')ty+=5;if(e.key==='ArrowUp')tx+=5;if(e.key==='ArrowDown')tx-=5;ty=Math.max(-35,Math.min(35,ty));tx=Math.max(-25,Math.min(25,tx))}};
 function line(ctx,points,color,width,glow=0){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.shadowColor=color;ctx.shadowBlur=glow;ctx.stroke();ctx.shadowBlur=0}
-function bolt(ctx,x1,y1,x2,y2,seed,alpha){const points=[];for(let i=0;i<=12;i++){const f=i/12,envelope=Math.sin(f*Math.PI);points.push([x1+(x2-x1)*f+Math.sin(i*13.1+seed)*17*envelope,y1+(y2-y1)*f+Math.cos(i*7.3+seed)*13*envelope])}line(ctx,points,`rgba(194,227,108,${alpha*.3})`,5,12);line(ctx,points,`rgba(255,247,190,${alpha})`,1.1,5)}
+function bolt(ctx,x1,y1,x2,y2,seed,alpha){const points=[];for(let i=0;i<=12;i++){const f=i/12,envelope=Math.sin(f*Math.PI);points.push([x1+(x2-x1)*f+Math.sin(i*13.1+seed)*17*envelope,y1+(y2-y1)*f+Math.cos(i*7.3+seed)*13*envelope])}const gold=mode==='thunder';line(ctx,points,`rgba(${gold?'255,148,18':'194,227,108'},${alpha*.38})`,gold?10:5,gold?22:12);if(gold)line(ctx,points,`rgba(255,198,45,${alpha*.85})`,3.5,12);line(ctx,points,`rgba(255,247,190,${alpha})`,gold?1.7:1.1,5)}
 function drawSword(ctx,x,y,size,angle,alpha){if(!swordReady)return;ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.globalAlpha=alpha;const sw=size*sword.width/sword.height;ctx.drawImage(sword,-sw/2,-size/2,sw,size);ctx.restore()}
 function render(now){const dt=Math.min((now-previous)/1000||0,.04);previous=now;if(!paused&&!document.hidden){time+=dt;if(burst>0){burst=Math.max(0,burst-dt);if(!burst)burstButton.disabled=false}}const motion=paused?0:1;rx+=(tx+(drag||paused?0:Math.sin(time*.8)*3)-rx)*.09;ry+=(ty+(flipped?180:0)+(drag||paused?0:Math.sin(time*.5)*6)-ry)*.09;card.style.setProperty('--rx',rx+'deg');card.style.setProperty('--ry',ry+'deg');card.style.setProperty('--mx',50+Math.sin(ry*Math.PI/180)*70+'%');card.style.setProperty('--my',50+rx*1.5+'%');card.style.setProperty('--px',Math.sin(ry*Math.PI/180)*7+'px');card.style.setProperty('--py',rx*.25+'px');
  bc.clearRect(0,0,w,h);fc.clearRect(0,0,w,h);const cx=w/2,cy=h*.49,R=Math.min(w*.42,330),scale=Math.min(w/750,1),progress=burst?1-burst/burstTotal:0,energy=burst?Math.sin(progress*Math.PI):0;bc.globalCompositeOperation='lighter';fc.globalCompositeOperation='lighter';
+ if(mode==='thunder'){
+   const aura=bc.createRadialGradient(cx,cy,R*.25,cx,cy,R*1.4);
+   aura.addColorStop(0,'rgba(255,181,35,0)');
+   aura.addColorStop(.52,`rgba(255,161,18,${(.12+energy*.15)*intensity})`);
+   aura.addColorStop(1,'rgba(255,145,0,0)');
+   bc.fillStyle=aura;bc.fillRect(0,0,w,h);
+ }
  // Fine orbital tracks behind the collectible card.
- bc.save();bc.translate(cx,cy+65);bc.rotate(-.25);for(let k=0;k<3;k++){bc.beginPath();bc.ellipse(0,0,R+k*20,(R+k*20)*.42,0,0,Math.PI*2);bc.strokeStyle=`rgba(92,219,159,${(.12+k*.015)*intensity})`;bc.lineWidth=k===1?1.3:.6;bc.stroke()}bc.restore();
+ bc.save();bc.translate(cx,cy+65);bc.rotate(-.25);for(let k=0;k<3;k++){bc.beginPath();bc.ellipse(0,0,R+k*20,(R+k*20)*.42,0,0,Math.PI*2);bc.strokeStyle=`rgba(${mode==='thunder'?'255,193,58':'92,219,159'},${(mode==='thunder'?.32+k*.04:.12+k*.015)*intensity})`;bc.lineWidth=k===1?1.3:.6;bc.stroke()}bc.restore();
 
  // Nine large blades with curved wakes and perspective depth.
  const count=9;
@@ -65,8 +72,8 @@ function render(now){const dt=Math.min((now-previous)/1000||0,.04);previous=now;
    for(let j=points.length-1;j>0;j--){
      const fade=Math.pow(1-j/points.length,1.7);
      const pair=[points[j],points[j-1]];
-     line(ctx,pair,`rgba(40,227,160,${.16*intensity*fade})`,8*fade,8);
-     line(ctx,pair,`rgba(189,255,208,${.5*intensity*fade})`,2*fade,3);
+     line(ctx,pair,`rgba(${mode==='thunder'?'255,171,28':'40,227,160'},${(mode==='thunder'?.32:.16)*intensity*fade})`,8*fade,8);
+     line(ctx,pair,`rgba(${mode==='thunder'?'255,226,137':'189,255,208'},${.65*intensity*fade})`,2*fade,3);
    }
    for(let j=2;j>0;j--){
      const q=pose(i,time-j*.023);
@@ -77,7 +84,24 @@ function render(now){const dt=Math.min((now-previous)/1000||0,.04);previous=now;
    // Lightning clings to the blade, rather than floating far from it.
    if(mode==='thunder'||burst){
      const dx=Math.sin(p.angle)*p.size*.4,dy=-Math.cos(p.angle)*p.size*.4;
-     bolt(ctx,p.x-dx,p.y-dy,p.x+dx,p.y+dy,time*9+i*2,(.55+energy*.4)*intensity);
+     bolt(ctx,p.x-dx,p.y-dy,p.x+dx,p.y+dy,time*9+i*2,(mode==='thunder'?.9:.55)+energy*.1);
+     if(mode==='thunder'){
+       const offset=10;
+       bolt(ctx,p.x-dx+offset,p.y-dy,p.x+dx-offset,p.y+dy,time*6+i*4,.62*intensity);
+     }
+   }
+ }
+ // Connect neighbouring blades around the perimeter, leaving the face readable.
+ if(mode==='thunder'){
+   for(let i=0;i<count;i++){
+     const p=pose(i,time),q=pose((i+1)%count,time);
+     bolt(bc,p.x,p.y,q.x,q.y,time*4+i*7,(.55+energy*.35)*intensity);
+   }
+   for(let i=0;i<48;i++){
+     const a=i*2.39996+time*.35,r=R*(.7+(i%7)/13)+energy*80;
+     const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r*.77;
+     const length=4+(i%5)*2;
+     line(i%3?bc:fc,[[x,y],[x+Math.cos(a)*length,y+Math.sin(a)*length]],`rgba(255,205,76,${(.45+(i%3)*.13)*intensity})`,1.5,6);
    }
  }
  // One sweeping foreground hero blade during the release.
@@ -90,7 +114,7 @@ function render(now){const dt=Math.min((now-previous)/1000||0,.04);previous=now;
    drawSword(fc,x,y,heroSize,.98,opacity);
  }
  // Slow-moving motes and arcing gold thunder. No strobe or repeated flashes.
- for(const p of motes){const a=p.a+time*p.v*.08,r=R*p.r*(1.3+energy);const x=cx+Math.cos(a)*r,y=((cy+Math.sin(a)*r*.8-time*p.v*15)%h+h)%h;const ctx=p.s>.55?fc:bc;ctx.fillStyle=`rgba(${p.s>.5?'237,218,136':'130,245,198'},${(.25+p.s*.5)*intensity})`;ctx.fillRect(x,y,p.s*2+1,p.s*2+1)}
+ for(const p of motes){const a=p.a+time*p.v*.08,r=R*p.r*(1.3+energy);const x=cx+Math.cos(a)*r,y=((cy+Math.sin(a)*r*.8-time*p.v*15)%h+h)%h;const ctx=p.s>.55?fc:bc;ctx.fillStyle=`rgba(${mode==='thunder'?'255,200,65':p.s>.5?'237,218,136':'130,245,198'},${(.25+p.s*.5)*intensity})`;ctx.fillRect(x,y,p.s*2+1,p.s*2+1)}
  if(mode==='thunder'||burst){const amount=burst?8:4;for(let k=0;k<amount;k++){const a=k/amount*Math.PI*2+time*.15;const radius=R*(1+energy*.35);const seed=Math.floor(time*7)*.7+k*5;bolt(k%2?bc:fc,cx+Math.cos(a)*radius,cy+Math.sin(a)*radius*.7,cx+Math.cos(a+.45)*radius,cy+Math.sin(a+.45)*radius*.7,seed,(.35+energy*.55)*intensity)}}
- if(burst){for(let k=0;k<3;k++){const f=(progress*1.5-k*.18);if(f>0&&f<1){fc.beginPath();fc.ellipse(cx,cy,R*(.3+f*2),R*(.3+f*2)*.65,0,0,Math.PI*2);fc.strokeStyle=`rgba(222,238,159,${(1-f)*intensity*.8})`;fc.lineWidth=2;fc.stroke()}}}
+ if(burst){for(let k=0;k<3;k++){const f=(progress*1.5-k*.18);if(f>0&&f<1){fc.beginPath();fc.ellipse(cx,cy,R*(.3+f*2),R*(.3+f*2)*.65,0,0,Math.PI*2);fc.strokeStyle=`rgba(${mode==='thunder'?'255,196,55':'222,238,159'},${(1-f)*intensity*.8})`;fc.lineWidth=mode==='thunder'?5:2;fc.shadowColor='#ffbd3b';fc.shadowBlur=mode==='thunder'?20:0;fc.stroke();fc.shadowBlur=0}}}
  bc.globalCompositeOperation='source-over';fc.globalCompositeOperation='source-over';requestAnimationFrame(render)}requestAnimationFrame(render);
