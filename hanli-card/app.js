@@ -19,8 +19,62 @@ function render(now){const dt=Math.min((now-previous)/1000||0,.04);previous=now;
  bc.clearRect(0,0,w,h);fc.clearRect(0,0,w,h);const cx=w/2,cy=h*.49,R=Math.min(w*.42,330),scale=Math.min(w/750,1),progress=burst?1-burst/burstTotal:0,energy=burst?Math.sin(progress*Math.PI):0;bc.globalCompositeOperation='lighter';fc.globalCompositeOperation='lighter';
  // Fine orbital tracks behind the collectible card.
  bc.save();bc.translate(cx,cy+65);bc.rotate(-.25);for(let k=0;k<3;k++){bc.beginPath();bc.ellipse(0,0,R+k*20,(R+k*20)*.42,0,0,Math.PI*2);bc.strokeStyle=`rgba(92,219,159,${(.12+k*.015)*intensity})`;bc.lineWidth=k===1?1.3:.6;bc.stroke()}bc.restore();
- // Seventy-two generated sword sprites orbit in three depth-sorted formations.
- const count=72;for(let i=0;i<count;i++){const ring=Math.floor(i/24),a=i/24*Math.PI*2+time*(.27+ring*.09)*(ring===1?-1:1),z=Math.sin(a),radius=R*(.81+ring*.12);let x=cx+Math.cos(a)*radius,y=cy+Math.sin(a)*radius*.52+ring*12,angle=a+Math.PI/2,size=(45+ring*9)*(0.65+scale*.35)*(1+z*.17);if(mode==='storm'){const f=(i/count+time*.15)%1;x=cx+(i%12-5.5)*R*.165+(1-f)*100;y=-100+f*(h+200);angle=-.34;size*=1.13}else if(mode==='thunder'){x=cx+Math.cos(a)*radius;y=cy+Math.sin(a)*radius*.78;angle=a+Math.PI/2}if(energy){const outward=energy*(reduced?25:180);x+=(x-cx)/R*outward;y+=(y-cy)/R*outward;size*=1+energy*.25;angle+=energy*1.1}const ctx=z>0?fc:bc;const alpha=(.4+(z+1)*.23)*(.5+intensity*.5);drawSword(ctx,x,y,size,angle,alpha);if(i%3===0){const tail=18+intensity*20+energy*55;line(ctx,[[x-Math.sin(angle)*tail,y+Math.cos(angle)*tail],[x,y]],`rgba(95,255,184,${alpha*.45})`,1,4)}}
+
+ // Nine large blades with curved wakes and perspective depth.
+ const count=9;
+ function pose(i,t){
+   const a=i/count*Math.PI*2+t*.65,z=Math.sin(a),radius=R*.91;
+   let x=cx+Math.cos(a)*radius,y=cy+z*radius*.57,angle=Math.atan2(-Math.sin(a),Math.cos(a)*.57)+Math.PI/2;
+   let size=(145+(z+1)*65)*(.64+scale*.36);
+   if(mode==='storm'){
+     const f=(i/count+t*.24)%1;
+     x=cx+(i%3-1)*R*.65+(1-f)*R*.9-R*.45;y=-240+f*(h+480);
+     angle=Math.PI+.45;size=(220+(i%3)*38)*(.6+scale*.4);
+   }else if(mode==='thunder'){
+     x=cx+Math.cos(a)*radius;y=cy+z*radius*.76;angle=a+Math.PI/2;
+     size=(190+(z+1)*40)*(.6+scale*.4);
+   }
+   if(burst){
+     if(progress<.28){
+       const k=progress/.28;
+       x=cx+(x-cx)*(1-k*.45);y=cy+(y-cy)*(1-k*.45);
+       angle+=(Math.atan2(x-cx,-(y-cy))-angle)*k;size*=1+k*.22;
+     }else{
+       const k=Math.min(1,(progress-.28)/.45),ease=1-Math.pow(1-k,3);
+       const a=i/count*Math.PI*2-.3;
+       x=cx+Math.cos(a)*R*(.5+ease*2.5);
+       y=cy+Math.sin(a)*R*(.5+ease*2.5)*.65;
+       angle=a+Math.PI/2;size*=1+Math.sin(k*Math.PI)*1.05;
+     }
+   }
+   return {x,y,angle,size,z};
+ }
+ for(let i=0;i<count;i++){
+   const p=pose(i,time),ctx=p.z>0?fc:bc,alpha=(.67+(p.z+1)*.13);
+   // A broad emerald wake, a gold midline, and a fine hot core.
+   const points=[];
+   for(let j=15;j>=0;j--){const q=pose(i,time-j*.035);points.push([q.x,q.y]);}
+   if(burst&&progress>.28){points.splice(0,points.length,[cx+(p.x-cx)*.24,cy+(p.y-cy)*.24],[p.x,p.y]);}
+   line(ctx,points,`rgba(20,220,147,${.13*intensity})`,22+energy*18,20);
+   line(ctx,points,`rgba(114,255,186,${.38*intensity})`,5+energy*5,12);
+   line(ctx,points,`rgba(247,241,178,${.72*intensity})`,1.3+energy,6);
+   for(let j=3;j>0;j--){const q=pose(i,time-j*.027);drawSword(ctx,q.x,q.y,q.size,q.angle,.07*(4-j)*intensity);}
+   drawSword(ctx,p.x,p.y,p.size,p.angle,alpha);
+   // Lightning clings to the blade, rather than floating far from it.
+   if(mode==='thunder'||burst){
+     const dx=Math.sin(p.angle)*p.size*.4,dy=-Math.cos(p.angle)*p.size*.4;
+     bolt(ctx,p.x-dx,p.y-dy,p.x+dx,p.y+dy,time*9+i*2,(.55+energy*.4)*intensity);
+   }
+ }
+ // One sweeping foreground hero blade during the release.
+ if(burst&&progress>.29&&progress<.77){
+   const f=(progress-.29)/.48;
+   const x=cx-R*1.5+f*R*3,y=cy+h*.44-f*h*.72;
+   const heroSize=(360+Math.sin(f*Math.PI)*240)*(.65+scale*.35);
+   const opacity=Math.sin(f*Math.PI)*.95;
+   line(fc,[[x-R*.65,y+h*.18],[x,y]],`rgba(96,255,180,${opacity*.4*intensity})`,26,25);
+   drawSword(fc,x,y,heroSize,.98,opacity);
+ }
  // Slow-moving motes and arcing gold thunder. No strobe or repeated flashes.
  for(const p of motes){const a=p.a+time*p.v*.08,r=R*p.r*(1.3+energy);const x=cx+Math.cos(a)*r,y=((cy+Math.sin(a)*r*.8-time*p.v*15)%h+h)%h;const ctx=p.s>.55?fc:bc;ctx.fillStyle=`rgba(${p.s>.5?'237,218,136':'130,245,198'},${(.25+p.s*.5)*intensity})`;ctx.fillRect(x,y,p.s*2+1,p.s*2+1)}
  if(mode==='thunder'||burst){const amount=burst?8:4;for(let k=0;k<amount;k++){const a=k/amount*Math.PI*2+time*.15;const radius=R*(1+energy*.35);const seed=Math.floor(time*7)*.7+k*5;bolt(k%2?bc:fc,cx+Math.cos(a)*radius,cy+Math.sin(a)*radius*.7,cx+Math.cos(a+.45)*radius,cy+Math.sin(a+.45)*radius*.7,seed,(.35+energy*.55)*intensity)}}
