@@ -1,0 +1,12 @@
+const card=document.getElementById('card'),autoButton=document.getElementById('auto'),foil=document.getElementById('foil'),depth=document.getElementById('depth');
+let auto=!matchMedia('(prefers-reduced-motion: reduce)').matches,flipped=false,dragging=false,rx=0,ry=0,targetX=0,targetY=0,startX=0,startY=0,lastX=0,lastY=0;
+function autoUI(){autoButton.textContent=auto?'Ⅱ 暂停旋转':'▷ 自动旋转';autoButton.setAttribute('aria-pressed',String(auto))}autoUI();
+function flip(){flipped=!flipped;document.getElementById('flip').textContent=flipped?'↻ 返回正面':'↻ 翻转卡片';card.setAttribute('aria-label',flipped?'Lucy 卡片背面，按空格翻回正面':'Lucy 全息卡片，按空格翻面，方向键旋转')}
+document.getElementById('flip').onclick=flip;autoButton.onclick=()=>{auto=!auto;autoUI()};
+foil.oninput=()=>{document.getElementById('foil-value').value=foil.value+'%';card.style.setProperty('--foil',foil.value/100*.65)};depth.oninput=()=>document.getElementById('depth-value').value=depth.value+'%';
+document.getElementById('reset').onclick=()=>{targetX=targetY=0;flipped=false;foil.value=65;depth.value=50;foil.oninput();depth.oninput();document.getElementById('flip').textContent='↻ 翻转卡片';auto=false;autoUI()};
+card.onpointerdown=e=>{dragging=true;auto=false;autoUI();startX=e.clientX;startY=e.clientY;lastX=targetY;lastY=targetX;card.setPointerCapture(e.pointerId)};
+card.onpointermove=e=>{if(!dragging)return;targetY=Math.max(-45,Math.min(45,lastX+(e.clientX-startX)*.28));targetX=Math.max(-35,Math.min(35,lastY-(e.clientY-startY)*.24))};
+card.onpointerup=card.onpointercancel=()=>dragging=false;
+card.onkeydown=e=>{if([' ','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();auto=false;autoUI();if(e.key===' '||e.key==='Enter')flip();if(e.key==='ArrowLeft')targetY-=5;if(e.key==='ArrowRight')targetY+=5;if(e.key==='ArrowUp')targetX+=5;if(e.key==='ArrowDown')targetX-=5;targetX=Math.max(-35,Math.min(35,targetX));targetY=Math.max(-45,Math.min(45,targetY))}};
+function animate(t){if(auto){targetY=Math.sin(t*.00065)*18;targetX=Math.cos(t*.00048)*8}rx+=(targetX-rx)*.09;ry+=(targetY+(flipped?180:0)-ry)*.09;card.style.setProperty('--rx',rx+'deg');card.style.setProperty('--ry',ry+'deg');let x=Math.sin(ry*Math.PI/180),y=rx/35;card.style.setProperty('--mx',50+x*65+'%');card.style.setProperty('--my',50+y*45+'%');card.style.setProperty('--px',x*depth.value*.18+'px');card.style.setProperty('--py',y*depth.value*.13+'px');requestAnimationFrame(animate)}requestAnimationFrame(animate);
