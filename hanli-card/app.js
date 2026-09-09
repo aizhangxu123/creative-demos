@@ -6,10 +6,10 @@ const sword=new Image();sword.src='sword.webp';let swordReady=false;sword.onload
 const motes=Array.from({length:90},(_,i)=>({a:i*2.39996,r:.3+Math.random()*.7,s:Math.random(),v:.2+Math.random()*.7}));
 function resize(){w=stage.clientWidth;h=stage.clientHeight;dpr=Math.min(devicePixelRatio||1,1.7);for(const c of [back,front]){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr)}bc.setTransform(dpr,0,0,dpr,0,0);fc.setTransform(dpr,0,0,dpr,0,0)}new ResizeObserver(resize).observe(stage);resize();
 function pauseUI(){pauseButton.textContent=paused?'继续动效':'暂停动效';pauseButton.setAttribute('aria-pressed',String(paused))}pauseUI();pauseButton.onclick=()=>{paused=!paused;pauseUI()};
-document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;burst=0;burstButton.disabled=false;burstLabel.style.opacity='0';burstButton.innerHTML=mode==='giant'?'释放巨剑 <span>✦</span>':'释放剑阵 <span>✦</span>';document.querySelectorAll('[data-mode]').forEach(v=>{v.classList.toggle('active',v===b);v.setAttribute('aria-pressed',String(v===b))})});
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;burst=0;burstButton.disabled=false;burstLabel.style.opacity='0';burstButton.innerHTML=mode==='giant'?'释放巨剑 <span>✦</span>':'释放剑阵 <span>✦</span>';document.querySelectorAll('[data-mode]').forEach(v=>{v.classList.toggle('active',v===b);v.setAttribute('aria-pressed',String(v===b))});if(mode==='giant')release();});
 power.oninput=()=>{intensity=power.value/100;document.querySelector('#power-value').value=power.value+'%'};
 function flip(){flipped=!flipped;document.querySelector('#flip').textContent=flipped?'返回正面':'翻转藏卡'}document.querySelector('#flip').onclick=flip;
-function release(){if(burst>0)return;paused=false;pauseUI();burst=burstTotal;burstButton.disabled=true;burstLabel.textContent=mode==='giant'?'巨剑术 · 斩':mode==='thunder'?'辟邪神雷':mode==='storm'?'万剑归宗':'青竹剑阵';burstLabel.style.opacity='1';setTimeout(()=>burstLabel.style.opacity='0',1100)}burstButton.onclick=release;
+function release(){if(burst>0)return;paused=false;pauseUI();burstTotal=mode==='giant'?1.8:3.3;burst=burstTotal;burstButton.disabled=true;if(mode==='giant'){burstLabel.style.opacity='0';return;}burstLabel.textContent=mode==='giant'?'巨剑术 · 斩':mode==='thunder'?'辟邪神雷':mode==='storm'?'万剑归宗':'青竹剑阵';burstLabel.style.opacity='1';setTimeout(()=>burstLabel.style.opacity='0',1100)}burstButton.onclick=release;
 card.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();card.focus({preventScroll:true});drag={x:e.clientX,y:e.clientY,tx,ty};card.setPointerCapture(e.pointerId)};card.onpointermove=e=>{if(!drag)return;tx=Math.max(-25,Math.min(25,drag.tx-(e.clientY-drag.y)*.2));ty=Math.max(-35,Math.min(35,drag.ty+(e.clientX-drag.x)*.22))};card.onpointerup=card.onpointercancel=card.onlostpointercapture=()=>drag=null;card.ondragstart=e=>e.preventDefault();
 card.onkeydown=e=>{if([' ','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();if(e.key===' '||e.key==='Enter')flip();if(e.key==='ArrowLeft')ty-=5;if(e.key==='ArrowRight')ty+=5;if(e.key==='ArrowUp')tx+=5;if(e.key==='ArrowDown')tx-=5;ty=Math.max(-35,Math.min(35,ty));tx=Math.max(-25,Math.min(25,tx))}};
 function line(ctx,points,color,width,glow=0){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.shadowColor=color;ctx.shadowBlur=glow;ctx.stroke();ctx.shadowBlur=0}
@@ -17,57 +17,20 @@ function bolt(ctx,x1,y1,x2,y2,seed,alpha){const points=[];for(let i=0;i<=12;i++)
 function drawSword(ctx,x,y,size,angle,alpha){if(!swordReady)return;ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.globalAlpha=alpha;const sw=size*sword.width/sword.height;ctx.drawImage(sword,-sw/2,-size/2,sw,size);ctx.restore()}
 
 function renderGiant(cx,cy,R,progress,energy){
- const active=burst>0,charge=active?Math.min(1,progress/.34):0;
- const strike=active?Math.max(0,Math.min(1,(progress-.34)/.18)):0;
- const recovery=active?Math.max(0,Math.min(1,(progress-.7)/.3)):0;
- const baseX=cx+Math.min(R*.7,w*.25);
- const gx=active?baseX+(cx-baseX)*charge:baseX;
- const gy=cy-h*.06+Math.sin(time*.8)*8+strike*h*.18*(1-recovery);
- const length=Math.min(h*.83,560)*(1+charge*.18)*(1-recovery*.15);
- const angle=active?-.28+strike*(Math.PI+.28):-.14;
- const glow=bc.createRadialGradient(gx,cy,10,gx,cy,h*.58);
- glow.addColorStop(0,`rgba(244,191,61,${(.14+charge*.15)*intensity})`);
- glow.addColorStop(.55,'rgba(28,180,119,.07)');glow.addColorStop(1,'rgba(0,0,0,0)');
- bc.fillStyle=glow;bc.fillRect(0,0,w,h);
- // The nine smaller blades visibly converge and dissolve into the main weapon.
- for(let i=0;i<9;i++){
-   const a=i/9*Math.PI*2+time*.42,r=R*.9*(1-charge);
-   const x=active?gx+Math.cos(a)*r:cx+Math.cos(a)*r;
-   const y=cy+Math.sin(a)*r*.6;
-   drawSword(bc,x,y,105*(1-charge*.5),a+Math.PI/2,(1-charge)*.7);
-   if(active&&charge<1)line(bc,[[x,y],[gx,gy]],`rgba(244,206,100,${charge*.3*intensity})`,1,5);
+ if(!burst||!swordReady)return;
+ const length=Math.min(460,w*.78);
+ const x=-length*.55+progress*(w+length*1.1);
+ const y=cy+12;
+ const fade=Math.min(1,progress/.1,(1-progress)/.15);
+ // A single horizontal sword, point first, crosses and exits the stage.
+ fc.save();fc.globalCompositeOperation='source-over';
+ for(let j=3;j>=1;j--){
+   drawSword(fc,x-j*17,y,length,Math.PI/2,fade*.045*(4-j));
  }
- const alpha=active?1-recovery*.45:.92;
- // Widen the existing sword artwork while retaining its engraved detail.
- fc.save();fc.translate(gx,gy);fc.rotate(angle);fc.scale(1.65,1);
- fc.shadowColor='#eacd65';fc.shadowBlur=(14+charge*20)*intensity;
- drawSword(fc,0,0,length,0,alpha);fc.restore();
- const dx=Math.sin(angle)*length*.42,dy=-Math.cos(angle)*length*.42;
- for(let k=0;k<3;k++)bolt(fc,gx-dx+(k-1)*9,gy-dy,gx+dx,gy+dy,time*5+k*4,(.5+charge*.35)*intensity*alpha);
- // A single moving crescent follows the slash; it is not a persistent beam.
- if(active&&strike>0&&strike<1){
-   for(let k=0;k<3;k++){
-     fc.beginPath();fc.arc(gx,gy,length*(.33+k*.045),-.28-Math.PI/2,angle-Math.PI/2);
-     fc.strokeStyle=`rgba(${k===1?'255,225,139':'99,245,178'},${Math.sin(strike*Math.PI)*(.55-k*.12)*intensity})`;
-     fc.lineWidth=12-k*4;fc.shadowColor='#dfc767';fc.shadowBlur=16;fc.stroke();fc.shadowBlur=0;
-   }
- }
- if(active&&strike>=1){
-   const f=Math.min(1,(progress-.52)/.42),iy=h*.83;
-   for(let k=0;k<3;k++){
-     const radius=Math.max(0,f-k*.08)*R*2;
-     if(radius<=0)continue;
-     fc.beginPath();fc.ellipse(cx,iy,radius,radius*.25,0,0,Math.PI*2);
-     fc.strokeStyle=`rgba(255,215,106,${(1-f)*.8*intensity})`;fc.lineWidth=3;fc.stroke();
-   }
-   for(let i=0;i<38;i++){
-     const a=i*2.39996,r=f*R*(.7+(i%5)*.25),x=cx+Math.cos(a)*r,y=iy+Math.sin(a)*r*.4-f*h*.12;
-     line(fc,[[x,y],[x-Math.cos(a)*12,y-Math.sin(a)*5]],`rgba(255,215,106,${(1-f)*intensity})`,2,4);
-   }
- }
+ drawSword(fc,x,y,length,Math.PI/2,fade);
+ fc.restore();
 }
-
-function render(now){const dt=Math.min((now-previous)/1000||0,.04);previous=now;if(!paused&&!document.hidden){time+=dt;if(burst>0){burst=Math.max(0,burst-dt);if(!burst)burstButton.disabled=false}}const motion=paused?0:1;rx+=(tx+(drag||paused?0:Math.sin(time*.8)*3)-rx)*.09;ry+=(ty+(flipped?180:0)+(drag||paused?0:Math.sin(time*.5)*6)-ry)*.09;card.style.setProperty('--rx',rx+'deg');card.style.setProperty('--ry',ry+'deg');card.style.setProperty('--mx',50+Math.sin(ry*Math.PI/180)*70+'%');card.style.setProperty('--my',50+rx*1.5+'%');card.style.setProperty('--px',Math.sin(ry*Math.PI/180)*7+'px');card.style.setProperty('--py',rx*.25+'px');
+function render(now){const dt=Math.min((now-previous)/1000||0,.04);previous=now;if(!paused&&!document.hidden&&(mode!=='giant'||swordReady)){time+=dt;if(burst>0){burst=Math.max(0,burst-dt);if(!burst)burstButton.disabled=false}}const motion=paused?0:1;rx+=(tx+(drag||paused?0:Math.sin(time*.8)*3)-rx)*.09;ry+=(ty+(flipped?180:0)+(drag||paused?0:Math.sin(time*.5)*6)-ry)*.09;card.style.setProperty('--rx',rx+'deg');card.style.setProperty('--ry',ry+'deg');card.style.setProperty('--mx',50+Math.sin(ry*Math.PI/180)*70+'%');card.style.setProperty('--my',50+rx*1.5+'%');card.style.setProperty('--px',Math.sin(ry*Math.PI/180)*7+'px');card.style.setProperty('--py',rx*.25+'px');
  bc.clearRect(0,0,w,h);fc.clearRect(0,0,w,h);const cx=w/2,cy=h*.49,R=Math.min(w*.42,330),scale=Math.min(w/750,1),progress=burst?1-burst/burstTotal:0,energy=burst?Math.sin(progress*Math.PI):0;bc.globalCompositeOperation='lighter';fc.globalCompositeOperation='lighter';
  if(mode==='thunder'){
    const aura=bc.createRadialGradient(cx,cy,R*.25,cx,cy,R*1.4);
